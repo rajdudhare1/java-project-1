@@ -1,6 +1,8 @@
 pipeline {
   agent none
-
+  environment {
+     MAJOR_RELEASE = 1
+  }
   stages { 
     stage('Unit Testing') {
       agent {
@@ -33,7 +35,7 @@ pipeline {
 
       steps {
          sh "mkdir -p /var/www/html/rectangles/all/${env.BRANCH_NAME}"
-         sh "cp dist/rectangle_${env.BUILD_NUMBER}.jar /var/www/html/rectangles/all/${env.BRANCH_NAME}/"
+         sh "cp dist/rectangle_${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar /var/www/html/rectangles/all/${env.BRANCH_NAME}/"
       }
     }
     stage("Running on Centos") {
@@ -41,8 +43,8 @@ pipeline {
          label 'Centos'
       }
       steps {
-         sh "wget http://sumitsalunke4.mylabserver.com/rectangles/all/${env.BRANCH_NAME}/rectangle_${env.BUILD_NUMBER}.jar"
-         sh "java -jar rectangle_${env.BUILD_NUMBER}.jar 3 4" 
+         sh "wget http://sumitsalunke4.mylabserver.com/rectangles/all/${env.BRANCH_NAME}/rectangle_${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar"
+         sh "java -jar rectangle_${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar 3 4" 
       }
     }
     stage ("Running on docker") {
@@ -50,8 +52,8 @@ pipeline {
         docker 'openjdk:8u121-jre'
       }
       steps {
-        sh "wget http://sumitsalunke4.mylabserver.com/rectangles/all/${env.BRANCH_NAME}/rectangle_${env.BUILD_NUMBER}.jar"
-        sh "java -jar rectangle_${env.BUILD_NUMBER}.jar 3 4"
+        sh "wget http://sumitsalunke4.mylabserver.com/rectangles/all/${env.BRANCH_NAME}/rectangle_${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar"
+        sh "java -jar rectangle_${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar 3 4"
       }
     }
     stage ("Promote to Green") {
@@ -62,7 +64,7 @@ pipeline {
         branch 'master'
       }
       steps {
-        sh "cp /var/www/html/rectangles/all/${env.BRANCH_NAME}/rectangle_${env.BUILD_NUMBER}.jar /var/www/html/rectangles/green/rectangle_${env.BUILD_NUMBER}.jar"
+        sh "cp /var/www/html/rectangles/all/${env.BRANCH_NAME}/rectangle_${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar /var/www/html/rectangles/green/rectangle_${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar"
       }
     }
     stage("Promote Development branch to master") {
@@ -84,6 +86,10 @@ pipeline {
         sh 'git merge development'
         echo "Pushing to origin master"
         sh "git push origin master"
+        echo "Tagging and Release"
+        sh "git tag rectangle-${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar" 
+        echo "push the tag to origin"
+        sh "git push origin rectangle-${env.MAJOR_RELEASE}.${env.BUILD_NUMBER}.jar"
       }
     } 
   }
